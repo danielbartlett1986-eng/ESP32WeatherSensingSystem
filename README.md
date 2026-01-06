@@ -1,135 +1,115 @@
-# ESP32 Weather Server with OLED & LED Temperature Gauge 🌡️📡
+# ESP32 BME280 HTTP Sensor Node
+# This project implements a low‑power ESP32 sensor node that:
 
-This project turns an ESP32 into a lightweight weather data receiver and web server.
-It accepts sensor readings over HTTP, displays them locally on an SSD1306 OLED, visualizes temperature using a 7-LED gauge, and serves a live web dashboard with a timestamp showing how fresh the data is.
+Connects to Wi‑Fi
 
-Think of it as a tiny weather base station that listens, remembers, and reports.
+Reads temperature, humidity, pressure from a BME280 sensor
 
-## Features
+Measures battery voltage using an analog input and resistor divider
 
-📶 WiFi-connected ESP32 web server
+Sends all readings to an HTTP endpoint on your network
 
-🌐 Live web dashboard with auto-refresh
+Enters deep sleep between measurements to save power
 
-⏱️ “Last update” age indicator (seconds since last reading)
+The sketch targets the Arduino‑ESP32 core and uses the Adafruit BME280 library for sensor access.
+​
 
-🖥️ SSD1306 OLED display for local readout
+## Hardware overview
+MCU: ESP32 development board (Arduino‑compatible)
 
-🌡️ LED temperature gauge (cold → hot)
+Sensor: BME280 (I²C, address 0x76)
 
-🔌 Accepts data via HTTP POST (or GET for testing)
+Solar panel: Generic 5w solar panel
 
-🔐 WiFi credentials kept out of source via secrets.h
+Solar Charger: CN3065
 
-## Hardware Requirements
+Boost/Buck Converter - required because the CN3065 outputs 3.3v and our board requires 5v to operate. Converter is adjustable so measure and turn the potentiometer up until your volt meter reads 5v. 
 
-ESP32 development board
+Wirerouting as follows: 
 
-SSD1306 OLED (128x64, I²C, address 0x3C)
+Solar panel --> CN3065
 
-7 LEDs + current-limiting resistors
+CN3065 Batt out --> 18650 Battery
 
-Jumper wires / breadboard
+CN3065 Sys out --> Boost Buck converter --> ESP32
 
-LED Pin Mapping
-Temperature Level	GPIO Pin
-Coldest	GPIO 2
-	GPIO 4
-	GPIO 5
-	GPIO 18
-	GPIO 19
-	GPIO 21
-Hottest	GPIO 22
+## Battery measurement:
 
-## Software Requirements
+Analog input on GPIO 33 (BATTERY_PIN)
 
-Arduino IDE
+Resistor divider from battery to ADC input (e.g. 27 kΩ / 100 kΩ)
 
-ESP32 board support installed
+### I²C wiring:
 
-## Libraries:
+SDA_PIN → GPIO 26
 
-WiFi
+SCL_PIN → GPIO 27
 
-WebServer
+Update the pin assignments in the sketch if your wiring is different.
+​
 
-Adafruit_GFX
+## What the code does
+### At each wake‑up cycle the ESP32:
 
-Adafruit_SSD1306
+Initializes serial, I²C, and the BME280 sensor.
 
-secrets.h
+Connects to the configured Wi‑Fi network using the provided SSID and password.
+​
+Reads:
 
-Create a file named secrets.h in the project directory:
+Temperature (°C), converts to Fahrenheit
 
-#define WIFI_SSID "YourWiFiName"
-#define WIFI_PASSWORD "YourWiFiPassword"
+Relative humidity (%)
 
+Pressure (hPa)
 
-This keeps credentials out of version control, which GitHub appreciates.
+Battery voltage (V) using the ADC and divider scaling
 
-# How It Works
-1. ESP32 Boots
+Logs readings to the serial monitor for debugging.
 
-Connects to WiFi
+Builds a URL‑encoded payload (e.g. temp=72.34&hum=40.1&pres=1008.5&batt=3.98).
 
-Starts a web server on port 80
+Sends the payload via HTTP POST to http://<serverIP>/update on port 80 using HTTPClient.
+​
 
-Displays IP address on the OLED
+Prints the HTTP status code to serial.
 
-2. Data Ingestion
+Enters deep sleep for SLEEP_SECONDS seconds (default 300 s / 5 min).
+​
 
-The ESP32 listens on:
+On the next timer wake‑up, the chip restarts at setup() and repeats the process.
 
-/update
+## Configuration
+Edit these sections near the top of the sketch before building:
 
+```arduino 
+// ---------- WiFi ----------
+const char* ssid     = "YOUR_NETWORK";
+const char* password = "PASSWORD";
 
-##Accepted parameters:
+// ---------- Server ----------
+const char* serverIP = "XXX.XXX.XX.XX";
+const int   serverPort = 80;
+Set ssid / password to your Wi‑Fi network credentials.
+```
 
-temp → Temperature (°F)
+Set serverIP to the host that will receive the HTTP POSTs (for example, a local HTTP server, ESP32 web server, or home automation bridge).
+​
 
-hum → Humidity (%)
+serverPort is currently fixed at 80; update if your server listens on a different port.
 
-pres → Pressure (hPa)
+### Deep sleep interval:
 
-batt → Battery voltage (V)
+```arduino
+#define SLEEP_SECONDS 300   // 5 minutes
+Adjust SLEEP_SECONDS to change how often the node wakes up and reports data.
+```
+### Battery measurement scaling:
 
-On receipt:
+```arduino
+#define R1 27000.0
+#define R2 100000.0
+These correspond to the resistor values in your battery voltage divider (top and bottom).
+The readBattery() helper uses the ADC reading and a fixed factor to reconstruct approximate battery voltage based on this divider.
+```
 
-Values are stored
-
-OLED updates
-
-LED gauge updates
-
-Timestamp is refreshed
-
-Example HTTP Request
-POST (recommended)
-POST /update HTTP/1.1
-Content-Type: application/x-www-form-urlencoded
-
-temp=72.5&hum=41.2&pres=1013.8&batt=3.94
-
-GET (for browser testing)
-http://ESP32_IP/update?temp=72.5&hum=41.2&pres=1013.8&batt=3.94
-
-Web Dashboard
-
-Navigate to the ESP32’s IP address in a browser:
-
-http://ESP32_IP/
-
-
-You’ll see:
-
-Temperature
-
-Humidity
-
-Pressure
-
-Battery voltage
-
-Time since last update (seconds)
-
-The page auto-refreshes every 5 seconds, so it always feels alive.
