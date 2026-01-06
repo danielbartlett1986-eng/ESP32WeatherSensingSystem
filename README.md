@@ -19,6 +19,20 @@ MCU: ESP32 development board (Arduino‑compatible)
 
 Sensor: BME280 (I²C, address 0x76)
 
+Solar panel: Generic 5w solar panel
+
+Solar Charger: CN3065
+
+Boost/Buck Converter - required because the CN3065 outputs 3.3v and our board requires 5v to operate. Converter is adjustable so measure and turn the potentiometer up until your volt meter reads 5v. 
+
+Wirerouting as follows: 
+
+Solar panel --> CN3065
+
+CN3065 Batt out --> 18650 Battery
+
+CN3065 Sys out --> Boost Buck converter --> ESP32
+
 ## Battery measurement:
 
 Analog input on GPIO 33 (BATTERY_PIN)
