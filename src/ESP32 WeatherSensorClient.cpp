@@ -2,13 +2,14 @@
 #include <HTTPClient.h>
 #include <Wire.h>
 #include <Adafruit_BME280.h>
+#include "secrets.h"
 
 // ---------- WiFi ----------
-const char* ssid     = "DasHausIot";
-const char* password = "Tundrav8!";
+const char* ssid     = WIFI_SSID;
+const char* password = WIFI_PASSWORD;
 
 // ---------- Server ----------
-const char* serverIP = "192.168.10.7";   // INSIDE ESP32
+const char* serverIP = serverIP;   // INSIDE ESP32
 const int   serverPort = 80;
 
 // ---------- Pins ----------
