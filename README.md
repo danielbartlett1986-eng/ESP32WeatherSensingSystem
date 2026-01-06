@@ -1,12 +1,12 @@
-ESP32 Weather Sensing System
+# ESP32 Weather Sensing System
 
 This repository contains the code for a weather sensing system using ESP32 microcontrollers. The system is divided into two main components:
 
-Weather Sensing Node – Collects environmental data like temperature, humidity, pressure, and battery voltage.
+        Weather Sensing Node – Collects environmental data like temperature, humidity, pressure, and battery voltage.
 
-Weather Sensing Server – Hosts a web server to display the latest readings and provides a web interface for monitoring.
+        Weather Sensing Server – Hosts a web server to display the latest readings and provides a web interface for monitoring.
 
-Table of Contents
+##Table of Contents
 
 Features
 
@@ -24,7 +24,7 @@ Usage
 
 License
 
-Features
+##Features
 
 Reads temperature, humidity, and pressure using BME280 sensors.
 
@@ -38,7 +38,7 @@ Web server interface to display real-time readings.
 
 Optionally logs readings to Google Sheets or other external databases.
 
-Hardware Requirements
+##Hardware Requirements
 
 1× ESP32 Dev Board (Node)
 
@@ -46,13 +46,21 @@ Hardware Requirements
 
 1× BME280 environmental sensor per node
 
+1x CN3065 Solar Charging Board
+
+1x 5w Solar Panel
+
+1x 18650 battery w/ holder
+
+1x Boost/Buck Converter
+
 Wires, breadboard, or PCB for connections
 
 Optional: LEDs for status indication
 
 Power supply (LiPo battery or USB)
 
-Software Requirements
+##Software Requirements
 
 Arduino IDE (v1.8.19 or later) or PlatformIO
 
