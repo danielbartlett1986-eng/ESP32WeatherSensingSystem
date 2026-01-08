@@ -2,7 +2,7 @@
 #include <HTTPClient.h>
 #include <Wire.h>
 #include <Adafruit_BME280.h>
-#include <secrets.h>
+#include "secrets.h"
 
 // ---------- WiFi ----------
 const char* ssid     = WIFI_SSID;
