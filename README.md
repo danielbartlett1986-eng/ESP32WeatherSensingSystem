@@ -1,135 +1,79 @@
-# ESP32 Weather Server with OLED & LED Temperature Gauge 🌡️📡
+🌤️ ESP32 Weather Sensing Node
+A compact, low-power Wi-Fi-connected weather monitoring system using two ESP32 boards — one as a sensor node and the other as a display server. Together, they collect and display real-time environmental data without relying on external cloud services.
 
-This project turns an ESP32 into a lightweight weather data receiver and web server.
-It accepts sensor readings over HTTP, displays them locally on an SSD1306 OLED, visualizes temperature using a 7-LED gauge, and serves a live web dashboard with a timestamp showing how fresh the data is.
+🧩 System Overview
+text
+[SENSOR NODE] --> HTTP POST --> [SERVER NODE]
+  ESP32 + BME280                  ESP32 + OLED + LEDs + Web Dashboard
+Sensor Node:
+Reads temperature, humidity, pressure, and battery voltage, then transmits the data to the server via Wi-Fi before entering deep sleep to conserve power.
 
-Think of it as a tiny weather base station that listens, remembers, and reports.
+Server Node:
+Receives data, updates an OLED display, manages a multi-LED temperature gauge, and serves a live web dashboard showing the latest readings.
 
-## Features
+💡 Features
+📡 Local Wi-Fi communication (no internet needed)
 
-📶 WiFi-connected ESP32 web server
+🌡️ Real-time environmental readings
 
-🌐 Live web dashboard with auto-refresh
+🔋 Battery voltage monitoring
 
-⏱️ “Last update” age indicator (seconds since last reading)
+💤 Low-power deep sleep on sensor node
 
-🖥️ SSD1306 OLED display for local readout
+🖥️ OLED and LED visual output
 
-🌡️ LED temperature gauge (cold → hot)
+🌐 Web dashboard auto-refreshing every few seconds
 
-🔌 Accepts data via HTTP POST (or GET for testing)
+⚙️ Hardware Components
+(x2) ESP32 Development Boards
 
-🔐 WiFi credentials kept out of source via secrets.h
+BME280 sensor (I²C)
 
-## Hardware Requirements
+SSD1306 OLED display (128×64)
 
-ESP32 development board
+7 LEDs with resistors (temperature gauge)
 
-SSD1306 OLED (128x64, I²C, address 0x3C)
+Voltage divider for battery monitoring
 
-7 LEDs + current-limiting resistors
+🔄 Data Flow
+Step	Action
+1️⃣	Sensor node wakes from sleep and connects to Wi-Fi.
+2️⃣	Reads temperature, humidity, pressure, and battery voltage.
+3️⃣	Sends data to server’s /update endpoint.
+4️⃣	Server updates OLED, LEDs, and web dashboard.
+5️⃣	Sensor returns to deep sleep until the next cycle.
+🖥️ Web Dashboard Example
+Access the server’s IP in your browser (e.g. http://192.168.1.42) to see live sensor data:
 
-Jumper wires / breadboard
+🌡️ Temperature: xx.x °F
 
-LED Pin Mapping
-Temperature Level	GPIO Pin
-Coldest	GPIO 2
-	GPIO 4
-	GPIO 5
-	GPIO 18
-	GPIO 19
-	GPIO 21
-Hottest	GPIO 22
+💧 Humidity: xx.x %
 
-## Software Requirements
+📉 Pressure: xxxx.x hPa
 
-Arduino IDE
+🔋 Battery: x.xx V
 
-ESP32 board support installed
+⏱️ Last Update: seconds since last post
 
-## Libraries:
+🧰 Configuration
+Edit your secrets.h file for both ESP32 devices:
 
-WiFi
+cpp
+#define WIFI_SSID "YourNetworkName"
+#define WIFI_PASSWORD "YourPassword"
+static const char* serverIP = "192.168.x.x";
+static const int serverPort = 80;
+Adjust sleep timing, LED thresholds, and other parameters as needed inside the code.
 
-WebServer
+🚀 Applications
+Local weather or greenhouse monitoring
 
-Adafruit_GFX
+Smart home environment sensor
 
-Adafruit_SSD1306
+Classroom or IoT learning project
 
-secrets.h
+Off-grid or solar-powered data logging
 
-Create a file named secrets.h in the project directory:
+🧠 Summary
+Two ESP32 boards — one sensing, one displaying — work together to create an elegant, efficient, and cloud-free weather sensing node that’s simple to build, energy-efficient, and visually engaging.
 
-#define WIFI_SSID "YourWiFiName"
-#define WIFI_PASSWORD "YourWiFiPassword"
-
-
-This keeps credentials out of version control, which GitHub appreciates.
-
-# How It Works
-1. ESP32 Boots
-
-Connects to WiFi
-
-Starts a web server on port 80
-
-Displays IP address on the OLED
-
-2. Data Ingestion
-
-The ESP32 listens on:
-
-/update
-
-
-##Accepted parameters:
-
-temp → Temperature (°F)
-
-hum → Humidity (%)
-
-pres → Pressure (hPa)
-
-batt → Battery voltage (V)
-
-On receipt:
-
-Values are stored
-
-OLED updates
-
-LED gauge updates
-
-Timestamp is refreshed
-
-Example HTTP Request
-POST (recommended)
-POST /update HTTP/1.1
-Content-Type: application/x-www-form-urlencoded
-
-temp=72.5&hum=41.2&pres=1013.8&batt=3.94
-
-GET (for browser testing)
-http://ESP32_IP/update?temp=72.5&hum=41.2&pres=1013.8&batt=3.94
-
-Web Dashboard
-
-Navigate to the ESP32’s IP address in a browser:
-
-http://ESP32_IP/
-
-
-You’ll see:
-
-Temperature
-
-Humidity
-
-Pressure
-
-Battery voltage
-
-Time since last update (seconds)
-
-The page auto-refreshes every 5 seconds, so it always feels alive.
