@@ -70,6 +70,9 @@ void setup() {
   // ---------- Time (NTP) ----------
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 
+  setenv("TZ", TZ_INFO, 1);
+  tzset();
+
   struct tm timeinfo;
   if (getLocalTime(&timeinfo)) {
     Serial.println("Time synchronized");
@@ -182,13 +185,32 @@ void updateOLED() {
   display.setTextSize(2);
   display.setCursor(0,0);
   display.print("TEMP ");
-  display.print((int)temperature); // whole number
+  display.print((int)temperature);
   display.print("F");
 
-  // ---------- BOTTOM: Date + Time with blinking colon ----------
-  struct tm timeinfo;
+  // ---------- Divider ----------
+  display.drawLine(0,18,127,18,SSD1306_WHITE);
+
+  // ---------- MIDDLE: Stats ----------
   display.setTextSize(1);
-  display.setCursor(0,52); // bottom row
+
+  display.setCursor(0,22);
+  display.print("Hum ");
+  display.print((int)humidity);
+  display.print("%");
+
+  display.setCursor(64,22);
+  display.print("Pres ");
+  display.print((int)pressure);
+
+  display.setCursor(0,34);
+  display.print("Batt ");
+  display.print(battery,2);
+  display.print("V");
+
+  // ---------- BOTTOM: Date + Time ----------
+  struct tm timeinfo;
+  display.setCursor(0,52);
 
   if (getLocalTime(&timeinfo)) {
     const char* months[] = {
@@ -196,24 +218,22 @@ void updateOLED() {
       "Jul","Aug","Sep","Oct","Nov","Dec"
     };
 
-    // blinking colon
-    char colon = (timeinfo.tm_sec % 2) ? ':' : ' ';
+  display.printf(
+    "%02d %s %04d  %02d:%02d",
+    timeinfo.tm_mday,
+    months[timeinfo.tm_mon],
+    timeinfo.tm_year + 1900,
+    timeinfo.tm_hour,
+    timeinfo.tm_min
+  );
+} else {
+  display.print("Time not set");
+}
 
-    display.printf(
-      "%02d %s %04d  %02d%c%02d",
-      timeinfo.tm_mday,
-      months[timeinfo.tm_mon],
-      timeinfo.tm_year + 1900,
-      timeinfo.tm_hour,
-      colon,
-      timeinfo.tm_min
-    );
-  } else {
-    display.print("Time not set");
-  }
 
   display.display();
 }
+
 
 void updateLEDGauge(float temp){
   int level = 0;
