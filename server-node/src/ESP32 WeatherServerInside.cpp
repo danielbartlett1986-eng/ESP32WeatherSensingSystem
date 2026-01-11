@@ -28,7 +28,7 @@ float battery     = 0;
 unsigned long lastUpdateMillis = 0;
 
 // ---------- LED Gauge ----------
-int ledPins[] = {2, 4, 5, 18, 19, 21, 22};
+int ledPins[] = {2, 4, 5, 18, 19, 25, 2};
 const int ledCount = sizeof(ledPins)/sizeof(ledPins[0]);
 
 // ---------- Function Prototypes ----------
@@ -144,15 +144,37 @@ void handleUpdate() {
 
 void updateOLED() {
   display.clearDisplay();
-  display.setCursor(0,0);
 
-  display.print("Temp: "); display.println(temperature);
-  display.print("Hum:  "); display.println(humidity);
-  display.print("Pres: "); display.println(pressure);
-  display.print("Batt: "); display.println(battery);
+  // Big temperature headline
+  display.setTextSize(2);
+  display.setCursor(0,0);
+  display.print(temperature,1);
+  display.print((char)247); // degree symbol
+  display.println("F");
+
+  // Divider line
+  display.drawLine(0,18,127,18,SSD1306_WHITE);
+
+  // Supporting stats
+  display.setTextSize(1);
+  display.setCursor(0,22);
+  display.print("Hum "); display.print(humidity,0); display.println("%");
+
+  display.setCursor(64,22);
+  display.print("Pres "); display.print(pressure,0);
+
+  display.setCursor(0,34);
+  display.print("Batt "); display.print(battery,2); display.println("V");
+
+  // Data age
+  display.setCursor(64,34);
+  display.print("Age ");
+  display.print((millis() - lastUpdateMillis) / 1000);
+  display.print("s");
 
   display.display();
 }
+
 
 void updateLEDGauge(float temp){
   int level = 0;
