@@ -4,4 +4,4 @@
 .vscode/launch.json
 .vscode/ipch
 # Ignore secrets (Wi-Fi, server IP, passwords)
-client-node/include/secrets.h
+**/secrets.h
