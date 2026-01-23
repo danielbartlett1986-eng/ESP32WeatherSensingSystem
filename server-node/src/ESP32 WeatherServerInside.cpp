@@ -28,9 +28,26 @@ float battery     = 0;
 
 unsigned long lastUpdateMillis = 0;
 
+const unsigned long EXPECTED_UPDATE_INTERVAL = 5UL * 60UL * 1000UL; // 5 minutes
+
+
+
 // ---------- LED Gauge ----------
 int ledPins[] = {2, 4, 5, 18, 19, 25, 2};
 const int ledCount = sizeof(ledPins)/sizeof(ledPins[0]);
+
+// ---------- Display State ----------
+enum DisplayState {
+  DISPLAY_DATA,
+  DISPLAY_PROCESSING
+};
+
+DisplayState displayState = DISPLAY_DATA;
+unsigned long displayStateStart = 0;
+unsigned long lastFlashMillis = 0;
+int flashCount = 0;
+bool flashVisible = true;
+
 
 // ---------- Function Prototypes ----------
 void handleUpdate();
@@ -70,15 +87,20 @@ void setup() {
   // ---------- Time (NTP) ----------
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 
-  setenv("TZ", TZ_INFO, 1);
+  setenv("TZ", "PST8PDT,M3.2.0/2,M11.1.0/2", 1);
   tzset();
 
   struct tm timeinfo;
-  if (getLocalTime(&timeinfo)) {
-    Serial.println("Time synchronized");
-  } else {
+
+  if (!getLocalTime(&timeinfo)) {
    Serial.println("Failed to obtain time");
+    return;
   }
+
+  char timeString[30];
+  strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", &timeinfo);
+  Serial.println(timeString);
+
   // Server route
   server.on("/update", HTTP_POST, handleUpdate);
   server.on("/update", HTTP_GET, handleUpdate);  // temporary GET for browser testing
@@ -147,9 +169,7 @@ display.display();
 
 }
 
-void loop() {
-  server.handleClient();
-}
+
 
 void handleUpdate() {
   // Read values from form-urlencoded
@@ -172,11 +192,67 @@ void handleUpdate() {
   Serial.print("Pres: "); Serial.println(pressure);
   Serial.print("Batt: "); Serial.println(battery);
 
-  updateOLED();
+  displayState = DISPLAY_PROCESSING;
+  displayStateStart = millis();
+  flashCount = 0;
+  flashVisible = true;
+
   updateLEDGauge(temperature);
 
   server.send(200,"text/plain","OK");
 }
+
+void drawProcessingScreen(uint8_t progress);
+
+void drawProcessingScreen(uint8_t progress) {
+  display.clearDisplay();
+
+  // Title
+  display.setTextSize(1);
+  display.setCursor(20, 8);
+  display.println("Weather Data");
+
+  display.setCursor(28, 18);
+  display.println("Incoming");
+
+  // Progress bar outline
+  int barX = 14;
+  int barY = 36;
+  int barW = 100;
+  int barH = 10;
+
+  display.drawRect(barX, barY, barW, barH, SSD1306_WHITE);
+
+  // Filled portion
+  int fillWidth = (progress * (barW - 2)) / 5; // 0–5 seconds
+  display.fillRect(barX + 1, barY + 1, fillWidth, barH - 2, SSD1306_WHITE);
+
+  // Status ticks
+  display.setCursor(40, 50);
+  display.printf("%d / 5", progress);
+
+  display.display();
+}
+
+void updateDisplayState() {
+  if (displayState == DISPLAY_PROCESSING) {
+    unsigned long elapsed = millis() - displayStateStart;
+
+    // One step per second
+    uint8_t progress = elapsed / 1000;
+
+    if (progress > 5) progress = 5;
+
+    drawProcessingScreen(progress);
+
+    // Done after 5 seconds
+    if (elapsed >= 5000) {
+      displayState = DISPLAY_DATA;
+      updateOLED();
+    }
+  }
+}
+
 
 void updateOLED() {
   display.clearDisplay();
@@ -207,6 +283,32 @@ void updateOLED() {
   display.print("Batt ");
   display.print(battery,2);
   display.print("V");
+
+    // ---------- NEXT UPDATE / OVERDUE ----------
+  display.setCursor(0, 42);
+
+  if (lastUpdateMillis > 0) {
+    unsigned long ageMs = millis() - lastUpdateMillis;
+    long remainingMs = EXPECTED_UPDATE_INTERVAL - ageMs;
+
+    if (remainingMs <= 0) {
+      // Blink overdue warning every 500 ms
+      if ((millis() / 500) % 2 == 0) {
+        display.print("UPDATE OVERDUE");
+      }
+    } else {
+      // MM:SS countdown
+      int remainingSec = remainingMs / 1000;
+      int minutes = remainingSec / 60;
+      int seconds = remainingSec % 60;
+
+      display.print("Next update ");
+      display.printf("%02d:%02d", minutes, seconds);
+    }
+  } else {
+    display.print("Waiting for data...");
+  }
+
 
   // ---------- BOTTOM: Date + Time ----------
   struct tm timeinfo;
@@ -248,4 +350,8 @@ void updateLEDGauge(float temp){
   for(int i=0;i<ledCount;i++){
     digitalWrite(ledPins[i], i<level ? HIGH : LOW);
   }
+}
+void loop() {
+  server.handleClient();
+  updateDisplayState();
 }
