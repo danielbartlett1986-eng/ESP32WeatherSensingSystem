@@ -29,8 +29,8 @@ float battery     = 0;
 unsigned long lastUpdateMillis = 0;
 
 const unsigned long EXPECTED_UPDATE_INTERVAL = 5UL * 60UL * 1000UL; // 5 minutes
-
-
+unsigned long lastOLEDRefresh = 0;
+const unsigned long OLED_REFRESH_INTERVAL = 1000; // 1 second
 
 // ---------- LED Gauge ----------
 int ledPins[] = {2, 4, 5, 18, 19, 25, 2};
@@ -38,11 +38,12 @@ const int ledCount = sizeof(ledPins)/sizeof(ledPins[0]);
 
 // ---------- Display State ----------
 enum DisplayState {
+  DISPLAY_STARTUP,
   DISPLAY_DATA,
   DISPLAY_PROCESSING
 };
 
-DisplayState displayState = DISPLAY_DATA;
+DisplayState displayState = DISPLAY_STARTUP;
 unsigned long displayStateStart = 0;
 unsigned long lastFlashMillis = 0;
 int flashCount = 0;
@@ -167,6 +168,9 @@ display.println(WiFi.localIP());
 
 display.display();
 
+displayStateStart = millis();
+displayState = DISPLAY_STARTUP;
+
 }
 
 
@@ -235,24 +239,36 @@ void drawProcessingScreen(uint8_t progress) {
 }
 
 void updateDisplayState() {
-  if (displayState == DISPLAY_PROCESSING) {
-    unsigned long elapsed = millis() - displayStateStart;
+  unsigned long now = millis();
 
-    // One step per second
+  if (displayState == DISPLAY_STARTUP) {
+    // Show startup screen for 3 seconds
+    if (now - displayStateStart >= 3000) {
+      displayState = DISPLAY_DATA;
+      lastOLEDRefresh = 0; // force redraw
+    }
+  }
+
+  else if (displayState == DISPLAY_PROCESSING) {
+    unsigned long elapsed = now - displayStateStart;
     uint8_t progress = elapsed / 1000;
-
     if (progress > 5) progress = 5;
 
     drawProcessingScreen(progress);
 
-    // Done after 5 seconds
     if (elapsed >= 5000) {
       displayState = DISPLAY_DATA;
+      lastOLEDRefresh = 0;
+    }
+  }
+
+  else if (displayState == DISPLAY_DATA) {
+    if (now - lastOLEDRefresh >= OLED_REFRESH_INTERVAL) {
       updateOLED();
+      lastOLEDRefresh = now;
     }
   }
 }
-
 
 void updateOLED() {
   display.clearDisplay();
